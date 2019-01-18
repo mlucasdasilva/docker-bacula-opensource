@@ -1,52 +1,68 @@
-bacula-db-data:
-  image: redcoolbeans/bacula-opensource-db-data:7.4.1
-  container_name: bacula-db-data
+version: "3.3"
 
-bacula-db:
-  image: redcoolbeans/bacula-opensource-db:7.4.1
-  container_name: bacula-db
-  hostname: bacula-db
-  volumes_from:
-    - bacula-db-data:rw
-  environment:
-    POSTGRES_PASSWORD: U8azIbKXY9QD
+services:
+#  bacula-db-data:
+#    image: redcoolbeans/bacula-opensource-db-data
+#    #image: redcoolbeans/bacula-opensource-db-data:7.4.1
+#    container_name: bacula-db-data
+  
+  bacula-db:
+    image: redcoolbeans/bacula-opensource-db
+    #image: redcoolbeans/bacula-opensource-db:7.4.1
+    container_name: bacula-db
+    hostname: bacula-db
+#    volumes_from:
+#      - bacula-db-data:rw
+    volumes:
+      - bacula-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: U8azIbKXY9QD
+  
+  bacula-dir:
+    image: redcoolbeans/bacula-opensource-dir
+    #image: redcoolbeans/bacula-opensource-dir:7.4.1
+    container_name: bacula-dir
+    hostname: bacula-dir
+    ports:
+      - "9101:9101" # bconsole -> dir
+      - "9102:9102" # dir -> fd
+    extra_hosts:
+      - "bacula-fd:127.0.0.1"
+    volumes:
+      - ./configs/ssl:/opt/bacula/etc/ssl
+      - ./configs/dir:/opt/bacula/etc
+    environment:
+      DB_NAME: bacula
+      DB_HOST: bacula-db
+      DB_USER: postgres
+      DB_PASSWORD: U8azIbKXY9QD
+  
+  bacula-sd:
+    image: redcoolbeans/bacula-opensource-sd
+    #image: redcoolbeans/bacula-opensource-sd:7.4.1
+    container_name: bacula-sd
+    hostname: bacula-sd
+    ports:
+      - "9103:9103" # dir/fd -> sd
+    volumes:
+      - ./configs/sd:/opt/bacula/etc
+      - ./configs/ssl:/opt/bacula/etc/ssl
+      - ./backups:/bw
+  
+  bacula-fd:
+    image: redcoolbeans/bacula-opensource-fd
+    #image: redcoolbeans/bacula-opensource-fd:7.4.1
+    container_name: bacula-fd
+    hostname: bacula-fd
+    ports:
+      - "9104:9102" # fd -> sd
+    volumes:
+      - /:/mnt:ro
+    environment:
+      FD_PASSWORD: Uu7ooy5Aequiev9caexe2IengaiTh0Ieiegh7Theweqr
 
-bacula-dir:
-  image: redcoolbeans/bacula-opensource-dir:7.4.1
-  container_name: bacula-dir
-  hostname: bacula-dir
-  ports:
-    - "9101:9101" # bconsole -> dir
-    - "9102:9102" # dir -> fd
-  extra_hosts:
-    - "bacula-fd:127.0.0.1"
-  volumes:
-    - ./configs/ssl:/opt/bacula/etc/ssl:ro
-    - ./configs/dir:/opt/bacula/etc:ro
-  environment:
-    DB_NAME: bacula
-    DB_HOST: bacula-db
-    DB_USER: postgres
-    DB_PASSWORD: U8azIbKXY9QD
+ 
+volumes:
+  bacula-data:
 
-bacula-sd:
-  image: redcoolbeans/bacula-opensource-sd:7.4.1
-  container_name: bacula-sd
-  hostname: bacula-sd
-  ports:
-    - "9103:9103" # dir/fd -> sd
-  volumes:
-    - ./configs/sd:/opt/bacula/etc:ro
-    - ./configs/ssl:/opt/bacula/etc/ssl:ro
-    - ./backups:/b:rw
 
-bacula-fd:
-  image: redcoolbeans/bacula-opensource-fd:7.4.1
-  container_name: bacula-fd
-  hostname: bacula-fd
-  ports:
-    - "9104:9102" # fd -> sd
-  volumes:
-    - /:/mnt:ro
-  environment:
-    FD_PASSWORD: Uu7ooy5Aequiev9caexe2IengaiTh0Ieiegh7Theweqr
