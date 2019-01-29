@@ -15,8 +15,8 @@
 # List Directors who are permitted to contact this File daemon
 #
 Director {
-  Name = bacula-dir
-  Password = "Uu7ooy5Aequiev9caexe2IengaiTh0Ieiegh7Theweqr"
+  Name = @@DIR_NAME@@-dir
+  Password = "@@FD_PASSWORD@@"
 }
 
 #
@@ -24,8 +24,8 @@ Director {
 #   status of the file daemon
 #
 Director {
-  Name = bacula-mon
-  Password = "Uu7ooy5Aequiev9caexe2IengaiTh0Ieiegh7Theweqr"
+  Name = @@MON_NAME@@-mon
+  Password = "@@MON_FD_PASSWORD@@"
   Monitor = yes
 }
 
@@ -33,7 +33,7 @@ Director {
 # "Global" File daemon configuration specifications
 #
 FileDaemon {                          # this is me
-  Name = bacula-fd02
+  Name = @@FD_NAME@@-fd02
   FDport = 9102                  # where we listen for the director
 #  WorkingDirectory = /opt/bacula/working
   WorkingDirectory = /var/spool/bacula

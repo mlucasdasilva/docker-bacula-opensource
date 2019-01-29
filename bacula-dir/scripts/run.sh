@@ -26,14 +26,43 @@
 : ${DB_USER:="postgres"}
 : ${DB_HOST:="bacula-db"}
 : ${DB_NAME:="bacula"}
-: ${LOG_FILE:="/opt/bacula/log/bacula.log"}
+: ${LOG_FILE:="/var/log/bacula/bacula.log"}
+: ${DIR_NAME:="bacula"}
+: ${MON_NAME:="bacula"}
+: ${FD_NAME:="bacula"}
+
+mkdir -p /var/spool/bacula
+
+# Setup bacula-fd.conf if it doesn't exist
+if [ ! -f /etc/bacula/bacula-fd.conf ]; then
+  # Only one variable is required, FD_PASSWORD. MON_FD_PASSWORD is derived from it.
+  if [ -z "${FD_PASSWORD}" ]; then
+          echo "==> FD_PASSWORD must be set, exiting"
+          exit 1
+  fi
+
+  : ${MON_FD_PASSWORD:="${FD_PASSWORD}"}
+
+  CONFIG_VARS=(
+    FD_NAME
+    FD_PASSWORD
+    DIR_NAME
+    MON_NAME
+    MON_FD_PASSWORD
+  )
+
+  cp /root/bacula-fd.conf.orig /etc/bacula/bacula-fd.conf && chmod 600 /etc/bacula/bacula-fd.conf
+  for c in ${CONFIG_VARS[@]}; do
+    sed -i "s,@@${c}@@,$(eval echo \$$c)," /etc/bacula/bacula-fd.conf
+  done
+fi
 
 echo "==> Looking for new plugins"
 _plugins=`ls -1 /plugins`
 echo ${_plugins} | grep -q -E '(\.rpm$)'
 if [[ "$?" -eq 0 ]]; then
   for p in ${_plugins}; do
-    yum -q localinstall -y /plugins/$p
+    yum -q --nogpgcheck localinstall -y /plugins/$p
   done
 fi
 
@@ -56,20 +85,22 @@ if psql -h ${DB_HOST} -U ${DB_USER} -lqt | cut -d\| -f1 | grep -qw ${DB_NAME}; t
     echo "=> Database already setup; skipping."
 else
     db_name=${DB_NAME}
-    /opt/bacula/scripts/create_postgresql_database -h ${DB_HOST} -U ${DB_USER}
+    /usr/libexec/bacula/create_postgresql_database -h ${DB_HOST} -U ${DB_USER}
     echo "==> Setting database encoding to SQL_ASCII"
     psql -h ${DB_HOST} -U ${DB_USER} -c "UPDATE pg_database SET encoding = pg_char_to_encoding('SQL_ASCII') WHERE datname = '${DB_NAME}'"
-    /opt/bacula/scripts/make_postgresql_tables -h ${DB_HOST} -U ${DB_USER}
-    /opt/bacula/scripts/grant_postgresql_privileges -h ${DB_HOST} -U ${DB_USER}
-    unset db_name
+    /usr/libexec/bacula/make_postgresql_tables -h ${DB_HOST} -U ${DB_USER}
+    /usr/libexec/bacula/grant_postgresql_privileges -h ${DB_HOST} -U ${DB_USER}
 fi
 
 # echo "==> Verifying Bacula DIR configuration"
-# /opt/bacula/bin/bacula-dir -c /opt/bacula/etc/bacula-dir.conf -t
+# /usr/sbin/bacula-dir -c /etc/bacula/bacula-dir.conf -t
 
 # The database setup created the logfile, but bacula-dir running as an unprivileged
 # user cannot append to the logfile anymore.
 [[ -f "${LOG_FILE}" ]] && chown bacula ${LOG_FILE}
+
+# Update database information in bacula-dir.conf before we clear environment variables
+sed -r -i -e "s#^\s+dbname.*#  dbname = \"${DB_NAME}\"; dbuser = \"${DB_USER}\"; dbpassword = \"${DB_PASSWORD}\"; dbaddress = \"${DB_HOST}\"#g" /etc/bacula/bacula-dir.conf
 
 # Clear any environment variables we no longer need, such as passwords.
 unset ${DB_PASSWORD}
@@ -78,7 +109,10 @@ unset ${DB_PASSWORD}
 # still using -f. This way we can run both commands simultaniously in the
 # foreground.
 echo "==> Starting Bacula FD"
-/opt/bacula/bin/bacula-fd -c /opt/bacula/etc/bacula-fd.conf -d ${BACULA_DEBUG} -f &
+/usr/sbin/bacula-fd -c /etc/bacula/bacula-fd.conf -d ${BACULA_DEBUG} -f &
 
 echo "==> Starting Bacula DIR"
-sudo -u bacula /opt/bacula/bin/bacula-dir -c /opt/bacula/etc/bacula-dir.conf -d ${BACULA_DEBUG} -f
+chown bacula /var/run
+chown bacula /var/spool/bacula
+[[ -f /etc/bacula/bacula-dir.conf ]] && chown bacula /etc/bacula/bacula-dir.conf
+sudo -u bacula /usr/sbin/bacula-dir -c /etc/bacula/bacula-dir.conf -d ${BACULA_DEBUG} -f

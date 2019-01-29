@@ -7,8 +7,13 @@ services:
 #    container_name: bacula-db-data
   
   bacula-db:
-    image: redcoolbeans/bacula-opensource-db
+    image: bacula-opensource-db
+    #image: romracer/bacula-opensource-db:7.4.3
+    #image: redcoolbeans/bacula-opensource-db
     #image: redcoolbeans/bacula-opensource-db:7.4.1
+    build:
+      context: ./
+      dockerfile: bacula-db/Dockerfile
     container_name: bacula-db
     hostname: bacula-db
 #    volumes_from:
@@ -20,10 +25,12 @@ services:
   
   bacula-dir:
     image: bacula-opensource-dir
+    #image: romracer/bacula-opensource-dir:7.4.3
     #image: redcoolbeans/bacula-opensource-dir
     #image: redcoolbeans/bacula-opensource-dir:7.4.1
     build:
-      context: ./bacula-dir
+      context: ./
+      dockerfile: bacula-dir/Dockerfile
     container_name: bacula-dir
     hostname: bacula-dir
     ports:
@@ -34,7 +41,8 @@ services:
     volumes:
 #      - ./configs/ssl:/opt/bacula/etc/ssl
 #      - ./configs/dir:/opt/bacula/etc
-      - ./bacula-dir-configs:/opt/bacula/etc
+#      - ./bacula-dir-configs:/opt/bacula/etc
+      - bacula-dir-configs:/etc/bacula
       - ./run/bacula-dir.9101.pid:/var/run/bacula-dir.9101.pid
       - ./run/bacula-dir.9102.pid:/var/run/bacula-dir.9102.pid
     environment:
@@ -42,10 +50,19 @@ services:
       DB_HOST: bacula-db
       DB_USER: postgres
       DB_PASSWORD: U8azIbKXY9QD
+      FD_PASSWORD: Uu7ooy5Aequiev9caexe2IengaiTh0Ieiegh7Theweqr
+    tty: true
+    stdin_open: true
+    privileged: true
   
   bacula-sd:
-    image: redcoolbeans/bacula-opensource-sd
+    image: bacula-opensource-sd
+    #image: romracer/bacula-opensource-sd:7.4.3
+    #image: redcoolbeans/bacula-opensource-sd
     #image: redcoolbeans/bacula-opensource-sd:7.4.1
+    build:
+      context: ./
+      dockerfile: bacula-sd/Dockerfile
     container_name: bacula-sd
     hostname: bacula-sd
     ports:
@@ -54,28 +71,42 @@ services:
 #      - ./configs/sd:/opt/bacula/etc
 #      - ./configs/ssl:/opt/bacula/etc/ssl
       - ./backups:/bw
-      - ./bacula-sd-configs:/opt/bacula/etc
+#      - bacula-sd-configs:/opt/bacula/etc
+      - ./bacula-sd-configs:/etc/bacula
       - ./run/bacula-sd.9103.pid:/var/run/bacula-sd.9103.pid
+    tty: true
+    stdin_open: true
+    privileged: true
   
   bacula-fd:
-    image: redcoolbeans/bacula-opensource-fd
+    image: bacula-opensource-fd
+    #image: romracer/bacula-opensource-fd:7.4.3
+    #image: redcoolbeans/bacula-opensource-fd
     #image: redcoolbeans/bacula-opensource-fd:7.4.1
+    build:
+      context: ./
+      dockerfile: bacula-fd/Dockerfile
     container_name: bacula-fd
     hostname: bacula-fd
     ports:
       - "9104:9102" # fd -> sd
     volumes:
-      - ./bacula-fd-configs:/opt/bacula/etc
+#      - ./bacula-fd-configs:/opt/bacula/etc
+      - bacula-fd-configs:/etc/bacula
       - /:/mnt:ro
     environment:
       FD_PASSWORD: Uu7ooy5Aequiev9caexe2IengaiTh0Ieiegh7Theweqr
+    tty: true
+    stdin_open: true
+    privileged: true
 
  
 volumes:
    bacula-data:
 #   bacula-dir-ssl:
-#   bacula-dir-configs:
-#   bacula-sd-configs:
+   bacula-dir-configs:
+   bacula-sd-configs:
+   bacula-fd-configs:
 #   bacula-sd-ssl:
 #   bacula-sd-backups:
 

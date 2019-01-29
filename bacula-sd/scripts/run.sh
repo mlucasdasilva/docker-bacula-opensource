@@ -25,16 +25,19 @@
 : ${BACULA_DEBUG:="50"}
 
 # Volume path for disk-based backups.
-chown bacula /b
+chown bacula /backups
+chown bacula /var/run
+mkdir -p /var/spool/bacula && chown bacula /var/spool/bacula
 
 echo "==> Looking for new plugins"
 _plugins=`ls -1 /plugins`
 echo ${_plugins} | grep -q -E '(\.rpm$)'
 if [[ "$?" -eq 0 ]]; then
   for p in ${_plugins}; do
-    yum -q localinstall -y /plugins/$p
+    yum -q --nogpgcheck localinstall -y /plugins/$p
   done
 fi
 
 echo "==> Starting Bacula SD"
-sudo -u bacula /opt/bacula/bin/bacula-sd -c /opt/bacula/etc/bacula-sd.conf -d ${BACULA_DEBUG} -f
+[[ -f /etc/bacula/bacula-sd.conf ]] && chown bacula /etc/bacula/bacula-sd.conf
+sudo -u bacula /usr/sbin/bacula-sd -c /etc/bacula/bacula-sd.conf -d ${BACULA_DEBUG} -f

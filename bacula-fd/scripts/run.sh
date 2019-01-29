@@ -23,7 +23,7 @@
 # Author: J. Lievisse Adriaanse <jasper@redcoolbeans.com>
 
 : ${BACULA_DEBUG:="50"}
-: ${LOG_FILE:="/opt/bacula/log/bacula.log"}
+: ${LOG_FILE:="/var/log/bacula/bacula.log"}
 : ${DIR_NAME:="bacula"}
 : ${MON_NAME:="bacula"}
 : ${FD_NAME:="bacula"}
@@ -44,13 +44,14 @@ CONFIG_VARS=(
   MON_FD_PASSWORD
 )
 
-cp /opt/bacula/etc/bacula-fd.conf.orig /opt/bacula/etc/bacula-fd.conf
+mkdir -p /var/spool/bacula
+cp /etc/bacula/bacula-fd.conf.orig /etc/bacula/bacula-fd.conf
 for c in ${CONFIG_VARS[@]}; do
-  sed -i "s,@@${c}@@,$(eval echo \$$c)," /opt/bacula/etc/bacula-fd.conf
+  sed -i "s,@@${c}@@,$(eval echo \$$c)," /etc/bacula/bacula-fd.conf
 done
 
 echo "==> Verifying Bacula FD configuration"
-/opt/bacula/bin/bacula-fd -c /opt/bacula/etc/bacula-fd.conf -t
+/usr/sbin/bacula-fd -c /etc/bacula/bacula-fd.conf -t
 
 echo "==> Starting Bacula FD"
-/opt/bacula/bin/bacula-fd -c /opt/bacula/etc/bacula-fd.conf -d ${BACULA_DEBUG} -f
+/usr/sbin/bacula-fd -c /etc/bacula/bacula-fd.conf -d ${BACULA_DEBUG} -f
